@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "rapier_lab",
+  "project_id": "6ab421d0-965f-45bf-9247-c77769856f31"
+}
