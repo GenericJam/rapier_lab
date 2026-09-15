@@ -1,6 +1,30 @@
+# Build artifacts
+/_build/
+/deps/
+/cover/
+/doc/
+/.fetch
+erl_crash.dump
+*.ez
+*.beam
+/config/*.secret.exs
+.elixir_ls/
 
-# Beads / Dolt files (added by bd init)
-.dolt/
-*.db
-.beads-credential-key
-.beads/proxieddb/
+# Machine-local mob dev config (each dev sets their own paths).
+mob.exs
+
+# Android build artifacts
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/*.apk
+android/app/src/main/jniLibs/*/lib*.so
+android/app/src/main/jniLibs/*/*.so
+
+# Rust artifacts
+native/*/target/
+
+# Beads
+.beads/daemon.lock
+.beads/daemon.log
