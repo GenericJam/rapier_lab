@@ -30,7 +30,11 @@ defmodule RapierLab.MixProject do
       {:mob_scene3d, path: System.get_env("MOB_SCENE3D_PATH", "/Users/kevin/code/mob_scene3d")},
       {:mob_dev, "~> 0.6.30", only: :dev, runtime: false},
       {:exqlite, "~> 0.27"},
-      {:igniter, "~> 0.8", only: [:dev, :test]}
+      {:igniter, "~> 0.8", only: [:dev, :test]},
+      # Rustler drives the `lab_physics` NIF crate at native/lab_physics/.
+      # That crate wraps `rapier3d` — the physics engine this spike exists
+      # to evaluate (bead rapier_lab-pkb).
+      {:rustler, "~> 0.37"}
     ]
   end
 end
