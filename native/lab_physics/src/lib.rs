@@ -1,12 +1,6 @@
-// rapier_lab-pkb: Rustler crate smoke.
-//
-// Enough surface to prove Rapier links and steps: create a world with
-// gravity, add a ball above a ground plane, step a fixed number of
-// frames, and read the ball's final y position back. If the ball has
-// fallen and rests near the plane, Rapier is alive and computing.
-//
-// The real NIF surface (rapier_lab-epu) — world_new, add_body,
-// apply_impulse, step, transforms — comes next.
+// Rustler + Rapier passthrough NIF for the rapier_lab spike. Bare
+// enough that rapier_lab-epu (the real API surface) can grow this file
+// without a rewrite.
 
 use rapier3d::prelude::*;
 use rustler::Atom;
@@ -15,10 +9,16 @@ mod atoms {
     rustler::atoms! { ok }
 }
 
-/// Runs a canned physics test: drops a unit-radius ball from 5 m onto a
-/// static ground plane, steps 60 frames at 1/60 s under -9.81 gravity,
-/// and returns the ball's final y position. Should be very close to 1.0
-/// (the ball's radius; centre resting on the plane).
+/// Returns `:ok` — the NIF is loaded.
+#[rustler::nif]
+fn ping() -> Atom {
+    atoms::ok()
+}
+
+/// Canned Rapier test: drops a unit-radius ball from 5 m onto a static
+/// ground plane, steps 120 frames at 1/60 s. Returns the ball's final
+/// y coordinate — should land near 1.0 (its radius; centre resting on
+/// the plane).
 #[rustler::nif]
 fn smoke_drop() -> f32 {
     let mut rigid_bodies = RigidBodySet::new();
@@ -36,11 +36,9 @@ fn smoke_drop() -> f32 {
     let physics_hooks = ();
     let event_handler = ();
 
-    // Static ground (a wide thin cuboid at y=0).
     let ground = ColliderBuilder::cuboid(50.0, 0.1, 50.0).build();
     colliders.insert(ground);
 
-    // A ball at (0, 5, 0), radius 1.
     let ball_rb = RigidBodyBuilder::dynamic()
         .translation(vector![0.0, 5.0, 0.0])
         .build();
@@ -66,14 +64,7 @@ fn smoke_drop() -> f32 {
         );
     }
 
-    let ball = &rigid_bodies[ball_handle];
-    ball.translation().y
-}
-
-/// Returns `:ok` — signals the NIF is loaded and callable.
-#[rustler::nif]
-fn ping() -> Atom {
-    atoms::ok()
+    rigid_bodies[ball_handle].translation().y
 }
 
 rustler::init!("Elixir.RapierLab.Physics");

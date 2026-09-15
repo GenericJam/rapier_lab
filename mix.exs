@@ -33,8 +33,10 @@ defmodule RapierLab.MixProject do
       {:igniter, "~> 0.8", only: [:dev, :test]},
       # Rustler drives the `lab_physics` NIF crate at native/lab_physics/.
       # That crate wraps `rapier3d` — the physics engine this spike exists
-      # to evaluate (bead rapier_lab-pkb).
-      {:rustler, "~> 0.37"}
+      # to evaluate (bead rapier_lab-pkb). 0.38+ carries the Bionic dlsym
+      # fix (RUSTLER_BEAM_LIBRARY_PATH), without which nif_init aborts on
+      # Android (memory: project_mob_rustler_android_dlsym).
+      {:rustler, "~> 0.38"}
     ]
   end
 end

@@ -37,6 +37,7 @@ extern fn prim_net_nif_init() callconv(.c) ?*anyopaque;
 extern fn asn1rt_nif_nif_init() callconv(.c) ?*anyopaque;
 extern fn crypto_nif_init() callconv(.c) ?*anyopaque;
 extern fn mob_nif_nif_init() callconv(.c) ?*anyopaque;
+extern fn lab_physics_nif_init() callconv(.c) ?*anyopaque;
 extern fn mob_scene3d_nif_nif_init() callconv(.c) ?*anyopaque;
 
 // Comptime flags threaded from build.zig via b.addOptions().
@@ -69,6 +70,7 @@ const base_nifs = [_]ErtsStaticNif{
     .{ .nif_init = asn1rt_nif_nif_init, .is_builtin = 1, .nif_mod = THE_NON_VALUE, .entry = null },
     .{ .nif_init = crypto_nif_init, .is_builtin = 1, .nif_mod = THE_NON_VALUE, .entry = null },
     .{ .nif_init = mob_nif_nif_init, .is_builtin = 0, .nif_mod = THE_NON_VALUE, .entry = null },
+    .{ .nif_init = lab_physics_nif_init, .is_builtin = 0, .nif_mod = THE_NON_VALUE, .entry = null },
     .{ .nif_init = mob_scene3d_nif_nif_init, .is_builtin = 0, .nif_mod = THE_NON_VALUE, .entry = null },
 };
 

@@ -8,8 +8,8 @@
   screens: [],
   notification_handlers: [],
   lifecycle: [],
+  composites: [],
   default_font: nil,
-  styles: [],
   default_style: nil,
-  composites: []
+  styles: []
 }
