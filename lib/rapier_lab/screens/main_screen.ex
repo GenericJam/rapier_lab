@@ -19,10 +19,16 @@ defmodule RapierLab.Screens.MainScreen do
 
   @tick_ms 33
 
+  # Physics ball radius (m) — big enough that the placeholder mesh
+  # reads at a glance in the viewport.
+  @ball_radius 0.3
+  # Height the ball is dropped from each new world.
+  @drop_height 2.0
+
   @impl Mob.Screen
   def mount(_params, _session, socket) do
     world = Physics.world_new()
-    ball = Physics.add_ball(world, 0.0, 3.0, 0.0, 0.05)
+    ball = Physics.add_ball(world, 0.0, @drop_height, 0.0, @ball_radius)
 
     ref = make_ref()
     Process.send_after(self(), {:tick, ref}, @tick_ms)
@@ -57,7 +63,7 @@ defmodule RapierLab.Screens.MainScreen do
 
   def handle_info({:tap, :reset}, socket) do
     world = Physics.world_new()
-    ball = Physics.add_ball(world, 0.0, 3.0, 0.0, 0.05)
+    ball = Physics.add_ball(world, 0.0, @drop_height, 0.0, @ball_radius)
     {:noreply, socket |> Mob.Socket.assign(world: world, ball: ball, frame: 0) |> rebuild_scene()}
   end
 
@@ -65,6 +71,12 @@ defmodule RapierLab.Screens.MainScreen do
 
   @impl Mob.Screen
   def render(assigns) do
+    ball_y =
+      case Physics.transforms(assigns.world) do
+        [{_id, {_x, y, _z}, _rot} | _] -> y
+        _ -> -999.0
+      end
+
     %{
       type: :column,
       props: %{
@@ -75,13 +87,6 @@ defmodule RapierLab.Screens.MainScreen do
         gap: 0
       },
       children: [
-        Mob.Scene3d.viewport(
-          id: :world,
-          ir: assigns.scene,
-          width: 372,
-          height: 500,
-          background: 0xFF6B4A2D
-        ),
         %{
           type: :box,
           props: %{
@@ -107,6 +112,47 @@ defmodule RapierLab.Screens.MainScreen do
               children: []
             }
           ]
+        },
+        %{
+          type: :box,
+          props: %{
+            id: :viewport_wrap,
+            fill_width: true,
+            weight: 1,
+            background: 0xFF6B4A2D,
+            align: :center
+          },
+          children: [
+            Mob.Scene3d.viewport(
+              id: :world,
+              ir: assigns.scene,
+              width: 372,
+              height: 500,
+              background: 0xFF6B4A2D
+            )
+          ]
+        },
+        %{
+          type: :box,
+          props: %{
+            fill_width: true,
+            height: 40,
+            background: 0xFF2A2318,
+            align: :center
+          },
+          children: [
+            %{
+              type: :text,
+              props: %{
+                text:
+                  "BALL Y = #{:erlang.float_to_binary(ball_y, decimals: 3)} FRAME #{assigns.frame}",
+                text_size: 12,
+                text_color: 0xFFF0E442,
+                font_weight: "bold"
+              },
+              children: []
+            }
+          ]
         }
       ]
     }
@@ -127,10 +173,12 @@ defmodule RapierLab.Screens.MainScreen do
   end
 
   defp camera do
+    # Camera 1 m up, 2 m back, pitched 15° down. FOV 55° — wide enough
+    # that the ball's whole fall from `@drop_height` sits in frame.
     %Entity{
       id: "camera",
-      transform: Transform.from_euler({-20.0, 0.0, 0.0}, position: {0.0, 2.0, 4.0}),
-      data: %Camera{fov_y: 40.0, near: 0.05, far: 20.0}
+      transform: Transform.from_euler({-15.0, 0.0, 0.0}, position: {0.0, 1.0, 2.0}),
+      data: %Camera{fov_y: 55.0, near: 0.05, far: 20.0}
     }
   end
 
@@ -154,12 +202,16 @@ defmodule RapierLab.Screens.MainScreen do
     {position, rotation} =
       case transforms do
         [{_id, pos, rot} | _] -> {pos, rot}
-        _ -> {{0.0, 3.0, 0.0}, {0.0, 0.0, 0.0, 1.0}}
+        _ -> {{0.0, @drop_height, 0.0}, {0.0, 0.0, 0.0, 1.0}}
       end
+
+    # probe.glb is a ~10 cm beveled cube; scale up to roughly match
+    # the physics collider radius (0.3 m → 60 cm diameter object).
+    s = @ball_radius * 6.0
 
     %Entity{
       id: "ball",
-      transform: %Transform{position: position, rotation: rotation, scale: {0.5, 0.5, 0.5}},
+      transform: %Transform{position: position, rotation: rotation, scale: {s, s, s}},
       data: %Model{asset: "probe.glb"}
     }
   end
