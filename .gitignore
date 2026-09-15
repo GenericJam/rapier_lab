@@ -28,3 +28,8 @@ native/*/target/
 # Beads
 .beads/daemon.lock
 .beads/daemon.log
+
+# Zig build cache
+android/app/src/main/jni/.zig-cache/
+android/app/src/main/jni/zig-out/
+
