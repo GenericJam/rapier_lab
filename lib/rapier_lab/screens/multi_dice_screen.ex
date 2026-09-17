@@ -38,8 +38,8 @@ defmodule RapierLab.Screens.MultiDiceScreen do
   @arena_half 0.30
 
   @settle_frames 12
-  @settle_lin_v 0.02
-  @settle_ang_v 0.15
+  @settle_lin_v 0.05
+  @settle_ang_v 0.30
 
   @impl Mob.Screen
   def mount(params, _session, socket) do
@@ -302,14 +302,17 @@ defmodule RapierLab.Screens.MultiDiceScreen do
       die_id =
         Physics.add_cuboid_in(@world_name, x, y, z, @die_half, @die_half, @die_half)
 
-      lx = (:rand.uniform() - 0.5) * 3.0e-4
-      lz = (:rand.uniform() - 0.5) * 3.0e-4
-      ly = 2.0e-5 + :rand.uniform() * 5.0e-5
+      # Density-1000 d6 cuboids weigh ~216 g (half-extent 0.03m).
+      # Impulses scaled to give ~0.1 m/s tumble velocity and a few
+      # rad/s spin, which reads as a nice shake before damping settles.
+      lx = (:rand.uniform() - 0.5) * 2.0e-2
+      lz = (:rand.uniform() - 0.5) * 2.0e-2
+      ly = 5.0e-3 + :rand.uniform() * 5.0e-3
       :ok = Physics.apply_impulse_in(@world_name, die_id, lx, ly, lz)
 
-      tx = (:rand.uniform() - 0.5) * 2.0e-6
-      ty = (:rand.uniform() - 0.5) * 2.0e-6
-      tz = (:rand.uniform() - 0.5) * 2.0e-6
+      tx = (:rand.uniform() - 0.5) * 5.0e-4
+      ty = (:rand.uniform() - 0.5) * 5.0e-4
+      tz = (:rand.uniform() - 0.5) * 5.0e-4
       :ok = Physics.apply_torque_impulse_in(@world_name, die_id, tx, ty, tz)
 
       die_id

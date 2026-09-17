@@ -45,8 +45,8 @@ defmodule RapierLab.Screens.ConvexDiceScreen do
   @drop_height_multi 0.35
 
   @settle_frames 12
-  @settle_lin_v 0.02
-  @settle_ang_v 0.15
+  @settle_lin_v 0.05
+  @settle_ang_v 0.30
 
   @impl Mob.Screen
   def mount(params, _session, socket) do
@@ -310,21 +310,21 @@ defmodule RapierLab.Screens.ConvexDiceScreen do
       verts = apply(Dice, verts_fun, [])
       body = Physics.add_convex_hull_in(@world_name, ox, drop_height, oz, verts, die_scale)
 
-      # Solo mode: no linear impulse (the die was rolling off screen),
-      # just enough torque to break rotational symmetry so it lands on a
-      # random face instead of the same one every roll. Trio mode keeps
-      # the original bigger shake because 3 dice sharing an arena need to
-      # tumble past each other.
+      # Solo mode: no linear impulse (a single big die was rolling off
+      # screen); enough torque to break rotational symmetry so it
+      # lands on a random face. Trio mode gives all three a shake so
+      # they tumble past each other. Base scales are calibrated for
+      # density-1000 bodies (~500 g for a die_scale=0.09 hull).
       {lin_scale, torque_scale} = if solo?, do: {0.0, 0.3}, else: {1.0, 1.0}
 
-      lx = (:rand.uniform() - 0.5) * 3.0e-4 * lin_scale
-      lz = (:rand.uniform() - 0.5) * 3.0e-4 * lin_scale
-      ly = (2.0e-5 + :rand.uniform() * 5.0e-5) * lin_scale
+      lx = (:rand.uniform() - 0.5) * 2.0e-2 * lin_scale
+      lz = (:rand.uniform() - 0.5) * 2.0e-2 * lin_scale
+      ly = (5.0e-3 + :rand.uniform() * 5.0e-3) * lin_scale
       :ok = Physics.apply_impulse_in(@world_name, body, lx, ly, lz)
 
-      tx = (:rand.uniform() - 0.5) * 5.0e-6 * torque_scale
-      ty = (:rand.uniform() - 0.5) * 5.0e-6 * torque_scale
-      tz = (:rand.uniform() - 0.5) * 5.0e-6 * torque_scale
+      tx = (:rand.uniform() - 0.5) * 8.0e-4 * torque_scale
+      ty = (:rand.uniform() - 0.5) * 8.0e-4 * torque_scale
+      tz = (:rand.uniform() - 0.5) * 8.0e-4 * torque_scale
       :ok = Physics.apply_torque_impulse_in(@world_name, body, tx, ty, tz)
 
       %{

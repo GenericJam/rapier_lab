@@ -35,8 +35,8 @@ defmodule RapierLab.Screens.DiceScreen do
   # "settled" after the angular + linear speed dip below these limits for
   # a handful of consecutive frames.
   @settle_frames 12
-  @settle_lin_v 0.02
-  @settle_ang_v 0.15
+  @settle_lin_v 0.05
+  @settle_ang_v 0.30
 
   @impl Mob.Screen
   def mount(_params, _session, socket) do

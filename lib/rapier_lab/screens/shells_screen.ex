@@ -39,8 +39,11 @@ defmodule RapierLab.Screens.ShellsScreen do
   @arena_half 0.20
 
   @settle_frames 12
-  @settle_lin_v 0.02
-  @settle_ang_v 0.15
+  # With damping doing the heavy lifting, generous thresholds catch
+  # the shell just after it "sleeps" rather than requiring it to be
+  # atomically still. 0.05 m/s ≈ 1.5 mm per 33 ms tick.
+  @settle_lin_v 0.05
+  @settle_ang_v 0.30
 
   @impl Mob.Screen
   def mount(_params, _session, socket) do
@@ -310,19 +313,19 @@ defmodule RapierLab.Screens.ShellsScreen do
           @polar_r
         )
 
-      # Rapier's default collider density is 1 kg/m³, so an oblate
-      # 3cm × 1.2cm × 3cm weighs ~45 mg — small linear impulses launch
-      # it far. Keep the linear impulse tiny (essentially just enough
-      # to break spawn symmetry) and give a small torque to tumble the
-      # shell in the air before it settles.
-      lx = (:rand.uniform() - 0.5) * 1.0e-6
-      lz = (:rand.uniform() - 0.5) * 1.0e-6
-      ly = :rand.uniform() * 2.0e-7
+      # With MobRapier's density-1000 tuning each shell weighs ~45 mg
+      # × 1000 = 45 g. Impulses need mass × target-velocity: 5×10⁻³ Ns
+      # ≈ 0.1 m/s, enough to tumble in the drop without launching
+      # anything past the walls. Damping kills residual motion after
+      # settle.
+      lx = (:rand.uniform() - 0.5) * 5.0e-3
+      lz = (:rand.uniform() - 0.5) * 5.0e-3
+      ly = :rand.uniform() * 2.0e-3
       :ok = Physics.apply_impulse_in(@world_name, shell_id, lx, ly, lz)
 
-      tx = (:rand.uniform() - 0.5) * 5.0e-8
-      ty = (:rand.uniform() - 0.5) * 5.0e-8
-      tz = (:rand.uniform() - 0.5) * 5.0e-8
+      tx = (:rand.uniform() - 0.5) * 1.0e-4
+      ty = (:rand.uniform() - 0.5) * 1.0e-4
+      tz = (:rand.uniform() - 0.5) * 1.0e-4
       :ok = Physics.apply_torque_impulse_in(@world_name, shell_id, tx, ty, tz)
 
       shell_id
