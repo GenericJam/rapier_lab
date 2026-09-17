@@ -351,8 +351,10 @@ def build_hulled(shape_key, out_name, geometry, numeral_scale=0.42):
     # BEHIND the triangulated mesh surface, we pass a larger outward
     # offset for d10 to lift the numeral above that surface.
     if shape_key == "d10":
-        hull_faces = trapezohedron_kite_centroids(geometry["d10"]["vertices"])
-        numeral_offset = 0.06  # ~6% of BODY_RADIUS, above kite triangulation
+        hull_faces = trapezohedron_kite_centroids(geometry["d10"]["vertices"], body)
+        # Centroid is now ON the mesh surface (raycast hit), so the
+        # standard tiny outward push is enough.
+        numeral_offset = NUMERAL_OFFSET
     else:
         hull_faces = hull_face_centroids(body)
         numeral_offset = NUMERAL_OFFSET
@@ -372,16 +374,24 @@ def build_hulled(shape_key, out_name, geometry, numeral_scale=0.42):
     export_glb(body, out_name)
 
 
-def trapezohedron_kite_centroids(vertices):
+def trapezohedron_kite_centroids(vertices, body_obj):
     """For MobRapier.Dice.pentagonal_trapezohedron_vertices structure —
     2 apexes + 5 upper ring + 5 lower ring (upper offset by 36° from
-    lower) — return the 10 kite centroids and their outward normals,
-    normalised to circumradius 1 like the hull polygons do.
+    lower) — return 10 (centroid, normal, area) records.
 
-    The mesh's kites are not planar (a design tradeoff in the vertex
-    table), so the numeral sits at the point-cloud centroid of the
-    kite's 4 vertices. Close enough for demo purposes; the numeral
-    still lands recognisably inside the visible kite region."""
+    Our specific vertex placement produces non-planar kites (the two
+    triangles Blender's convex_hull emits per kite have non-parallel
+    normals), so hull_face_centroids can't merge them into 10 groups
+    by normal. Instead we compute the analytic kite centroid and then
+    project it OUTWARD along the centroid direction until it hits one
+    of the mesh's triangles for that kite — so the numeral sits ON
+    the visible surface instead of behind it (where the 4-vertex
+    average lands inside the mesh).
+
+    The resulting centroid is on the mesh surface; the returned
+    normal is the mesh triangle's normal at that point (not the
+    average kite direction) so numeral orientation reflects the
+    actual face plane."""
     # Normalise the same way make_hull_body did.
     max_r = max(math.sqrt(x * x + y * y + z * z) for x, y, z in vertices)
     scale = BODY_RADIUS / max_r
@@ -396,16 +406,37 @@ def trapezohedron_kite_centroids(vertices):
     # Top kites (face 1..5): apex_top, upper_k, lower_k, upper_{k+1}
     for k in range(5):
         verts = [apex_top, upper[k], lower[k], upper[(k + 1) % 5]]
-        centroid = sum(verts, Vector()) / len(verts)
-        normal = centroid.normalized()
-        faces.append((centroid, normal, 1.0))
+        centroid_analytic = sum(verts, Vector()) / len(verts)
+        direction = centroid_analytic.normalized()
+        surface_pt, surface_n = raycast_from_origin(body_obj, direction)
+        if surface_pt is not None:
+            faces.append((surface_pt, surface_n, 1.0))
+        else:
+            faces.append((centroid_analytic, direction, 1.0))
     # Bottom kites (face 6..10): apex_bot, lower_k, upper_{k+1}, lower_{k+1}
     for k in range(5):
         verts = [apex_bot, lower[k], upper[(k + 1) % 5], lower[(k + 1) % 5]]
-        centroid = sum(verts, Vector()) / len(verts)
-        normal = centroid.normalized()
-        faces.append((centroid, normal, 1.0))
+        centroid_analytic = sum(verts, Vector()) / len(verts)
+        direction = centroid_analytic.normalized()
+        surface_pt, surface_n = raycast_from_origin(body_obj, direction)
+        if surface_pt is not None:
+            faces.append((surface_pt, surface_n, 1.0))
+        else:
+            faces.append((centroid_analytic, direction, 1.0))
     return faces
+
+
+def raycast_from_origin(body_obj, direction):
+    """Ray from origin in `direction`, return the (hit_point,
+    face_normal) of the first mesh polygon hit. Uses Blender's
+    ray_cast on the object."""
+    origin = Vector((0.0, 0.0, 0.0))
+    # Blender's obj.ray_cast expects a start point and direction in
+    # object-local coordinates. Body is at origin identity for now.
+    hit, location, normal, index = body_obj.ray_cast(origin, direction)
+    if hit:
+        return location, Vector(normal).normalized()
+    return None, None
 
 
 def main():
@@ -417,7 +448,10 @@ def main():
     # 20 small triangles, d12 has 12 pentagons, d10 has 10 tall kites.
     build_hulled("d20", "d20.glb", geometry, numeral_scale=0.42)
     build_hulled("d12", "d12.glb", geometry, numeral_scale=0.55)
-    build_hulled("d10", "d10.glb", geometry, numeral_scale=0.80)
+    # d10 numeral scale 0.55 fits a two-digit number ("10") inside the
+    # kite bounds without clipping, and reads at the demo camera
+    # distance without needing a magnifier.
+    build_hulled("d10", "d10.glb", geometry, numeral_scale=0.55)
 
 
 if __name__ == "__main__":

@@ -45,14 +45,19 @@ defmodule RapierLab.Screens.PickerChips do
   end
 
   @doc """
-  Renders a horizontally-scrollable row of chips. `active` is the chip
-  tag currently owning the screen — its chip is highlighted so users
-  see which demo they're in. `sender` is the pid the chip taps route
-  back to (typically `self()` inside the screen's `render/1`).
+  Renders a top tab bar. `active` is the chip tag currently owning the
+  screen — its tab is highlighted so users see which demo they're in.
+  `sender` is the pid the tab taps route back to (typically `self()`
+  inside the screen's `render/1`).
+
+  Each tab uses `weight: 1` so the six tabs distribute the row width
+  evenly. The old `justify: :space_between` approach relied on a Row
+  prop mob's Android renderer doesn't honour and only the first tab
+  rendered.
   """
   @spec chip_row(atom(), pid()) :: map()
   def chip_row(active, sender) do
-    chips =
+    tabs =
       for {tag, label, _screen, _params} <- entries() do
         highlighted? = tag == active
 
@@ -60,11 +65,10 @@ defmodule RapierLab.Screens.PickerChips do
           type: :box,
           props: %{
             id: tag,
-            padding_horizontal: 12,
-            padding_vertical: 6,
-            background: if(highlighted?, do: 0xFFF5ECD6, else: 0xFF3A2E1E),
-            corner_radius: 14,
+            weight: 1,
+            fill_height: true,
             align: :center,
+            background: if(highlighted?, do: 0xFFF5ECD6, else: 0xFF3A2E1E),
             accessibility_role: "button",
             accessibility_label: label,
             on_tap: {sender, tag}
@@ -74,10 +78,10 @@ defmodule RapierLab.Screens.PickerChips do
               type: :text,
               props: %{
                 text: label,
-                text_size: 12,
+                text_size: 11,
                 text_color: if(highlighted?, do: 0xFF1A1408, else: 0xFFF5ECD6),
                 font_weight: "bold",
-                letter_spacing: 2.0
+                letter_spacing: 1.5
               },
               children: []
             }
@@ -92,11 +96,9 @@ defmodule RapierLab.Screens.PickerChips do
         height: 44,
         background: 0xFF241C10,
         align: :center,
-        padding: 6,
-        gap: 6,
-        justify: :space_between
+        gap: 2
       },
-      children: chips
+      children: tabs
     }
   end
 

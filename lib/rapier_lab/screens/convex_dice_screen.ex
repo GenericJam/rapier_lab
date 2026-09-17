@@ -384,7 +384,7 @@ defmodule RapierLab.Screens.ConvexDiceScreen do
   defp camera_for([_only]) do
     %Entity{
       id: "camera",
-      transform: Transform.from_euler({-55.0, 0.0, 0.0}, position: {0.0, 0.5, 0.25}),
+      transform: Transform.from_euler({-45.0, 0.0, 0.0}, position: {0.0, 0.45, 0.32}),
       data: %Camera{fov_y: 55.0, near: 0.02, far: 20.0}
     }
   end
