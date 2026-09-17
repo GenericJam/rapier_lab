@@ -274,8 +274,14 @@ defmodule RapierLab.Screens.MultiDiceScreen do
     wall_t = 0.02
     half = @arena_half
 
-    for {x, z} <- [{half, 0.0}, {-half, 0.0}, {0.0, half}, {0.0, -half}] do
-      Physics.add_static_cuboid_in(@world_name, x, wall_h, z, wall_t, wall_h, half)
+    # See shells_screen.ex build_arena for the per-wall extent story.
+    for {x, z, hx, hz} <- [
+          {half, 0.0, wall_t, half},
+          {-half, 0.0, wall_t, half},
+          {0.0, half, half, wall_t},
+          {0.0, -half, half, wall_t}
+        ] do
+      Physics.add_static_cuboid_in(@world_name, x, wall_h, z, hx, wall_h, hz)
     end
 
     :ok

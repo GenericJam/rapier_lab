@@ -261,11 +261,22 @@ defmodule RapierLab.Screens.ShellsScreen do
 
   defp build_arena do
     wall_h = 0.05
-    wall_t = 0.02
+    # Thick walls stop tunneling — with 45 mg shells and dt=1/60s, thin
+    # walls occasionally get missed between substeps.
+    wall_t = 0.05
     half = @arena_half
 
-    for {x, z} <- [{half, 0.0}, {-half, 0.0}, {0.0, half}, {0.0, -half}] do
-      Physics.add_static_cuboid_in(@world_name, x, wall_h, z, wall_t, wall_h, half)
+    # ±X walls run along Z (thin in X, long in Z); ±Z walls run along X
+    # (long in X, thin in Z). Using the same (wall_t, wall_h, half)
+    # half-extents for all four leaves a 3-sided arena — shells escape
+    # along the missing axis. Pass per-wall extents instead.
+    for {x, z, hx, hz} <- [
+          {half, 0.0, wall_t, half},
+          {-half, 0.0, wall_t, half},
+          {0.0, half, half, wall_t},
+          {0.0, -half, half, wall_t}
+        ] do
+      Physics.add_static_cuboid_in(@world_name, x, wall_h, z, hx, wall_h, hz)
     end
 
     :ok
@@ -299,17 +310,19 @@ defmodule RapierLab.Screens.ShellsScreen do
           @polar_r
         )
 
-      # Small linear + a bigger torque — cowries need to tumble in the air
-      # to actually pick between :up and :down when they land, not to fly
-      # apart. Torque values sized so a settled shell has visibly rotated.
-      lx = (:rand.uniform() - 0.5) * 3.0e-4
-      lz = (:rand.uniform() - 0.5) * 3.0e-4
-      ly = 2.0e-5 + :rand.uniform() * 5.0e-5
+      # Rapier's default collider density is 1 kg/m³, so an oblate
+      # 3cm × 1.2cm × 3cm weighs ~45 mg — small linear impulses launch
+      # it far. Keep the linear impulse tiny (essentially just enough
+      # to break spawn symmetry) and give a small torque to tumble the
+      # shell in the air before it settles.
+      lx = (:rand.uniform() - 0.5) * 1.0e-6
+      lz = (:rand.uniform() - 0.5) * 1.0e-6
+      ly = :rand.uniform() * 2.0e-7
       :ok = Physics.apply_impulse_in(@world_name, shell_id, lx, ly, lz)
 
-      tx = (:rand.uniform() - 0.5) * 4.0e-6
-      ty = (:rand.uniform() - 0.5) * 4.0e-6
-      tz = (:rand.uniform() - 0.5) * 4.0e-6
+      tx = (:rand.uniform() - 0.5) * 5.0e-8
+      ty = (:rand.uniform() - 0.5) * 5.0e-8
+      tz = (:rand.uniform() - 0.5) * 5.0e-8
       :ok = Physics.apply_torque_impulse_in(@world_name, shell_id, tx, ty, tz)
 
       shell_id
@@ -394,21 +407,29 @@ defmodule RapierLab.Screens.ShellsScreen do
     }
   end
 
-  # Non-uniform scale on the die probe mesh — no cowrie art yet, so a
-  # flattened probe reads as oblate on-screen while the physics uses the
-  # real oblate collider from rapier_lab-gmx.
+  # Real cowrie meshes from the crosscourt (chopaat) sheet — 7 variants
+  # authored dome-up, ~1cm long. Assigned per shell_id so the 7 shells
+  # look different from each other. Physics still uses the oblate
+  # collider from rapier_lab-gmx (both are symmetric enough that a
+  # cowrie mesh riding the oblate transform reads as a real shell).
+  @cowrie_variants ~w(cowrie_a1 cowrie_a2 cowrie_a3 cowrie_a4 cowrie_a5 cowrie_a6 cowrie_a7)
+
+  # The chopaat cowrie is ~1 cm long, our oblate is 6 cm across
+  # (2 × @equatorial_r). Scale factor 3 puts the mesh in the same
+  # ballpark as the collider.
+  @cowrie_scale 3.0
+
   defp shell_entity(shell_id, entry) do
-    equatorial_s = @equatorial_r / 0.05
-    polar_s = @polar_r / 0.05
+    variant = Enum.at(@cowrie_variants, rem(shell_id, length(@cowrie_variants)))
 
     %Entity{
       id: "shell_#{shell_id}",
       transform: %Transform{
         position: entry.pos,
         rotation: entry.rot,
-        scale: {equatorial_s, polar_s, equatorial_s}
+        scale: {@cowrie_scale, @cowrie_scale, @cowrie_scale}
       },
-      data: %Model{asset: "probe.glb"}
+      data: %Model{asset: "#{variant}.glb"}
     }
   end
 

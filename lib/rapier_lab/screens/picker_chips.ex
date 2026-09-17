@@ -26,7 +26,6 @@ defmodule RapierLab.Screens.PickerChips do
       {:pick_shells, "SHELLS", ShellsScreen, %{}},
       {:pick_1d6, "1D6", MultiDiceScreen, %{count: 1}},
       {:pick_10d6, "10D6", MultiDiceScreen, %{count: 10}},
-      {:pick_d10, "D10", ConvexDiceScreen, %{shapes: [:d10]}},
       {:pick_d12, "D12", ConvexDiceScreen, %{shapes: [:d12]}},
       {:pick_d20, "D20", ConvexDiceScreen, %{shapes: [:d20]}}
     ]

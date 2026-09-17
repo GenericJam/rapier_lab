@@ -25,12 +25,11 @@ defmodule RapierLab.Screens.ConvexDiceScreen do
   # Table keyed by shape atom. Each row is {label, vertex-table getter,
   # face-up getter, spawn offset in xz, face-count for the readout}.
   @dice_by_shape %{
-    d20: {"d20", :icosahedron_vertices, :face_up_d20, {-0.09, 0.0}, 20},
-    d12: {"d12", :dodecahedron_vertices, :face_up_d12, {0.0, 0.0}, 12},
-    d10: {"d10", :pentagonal_trapezohedron_vertices, :face_up_d10, {0.09, 0.0}, 10}
+    d20: {"d20", :icosahedron_vertices, :face_up_d20, {-0.06, 0.0}, 20},
+    d12: {"d12", :dodecahedron_vertices, :face_up_d12, {0.06, 0.0}, 12}
   }
 
-  @default_shapes [:d20, :d12, :d10]
+  @default_shapes [:d20, :d12]
 
   # Bigger die + wider arena for single-shape mounts (D10 / D12 / D20
   # chips) — numerals need to be readable at demo distance and the die
@@ -84,9 +83,8 @@ defmodule RapierLab.Screens.ConvexDiceScreen do
   defp die_scale_for(_multi), do: @die_scale_multi
 
   # A single-shape mount lights up that shape's chip; a multi-shape mount
-  # (the default, [:d20, :d12, :d10]) doesn't correspond to any single
-  # chip, so no chip is highlighted.
-  defp shapes_to_chip([:d10]), do: :pick_d10
+  # (the default, [:d20, :d12]) doesn't correspond to any single chip,
+  # so no chip is highlighted.
   defp shapes_to_chip([:d12]), do: :pick_d12
   defp shapes_to_chip([:d20]), do: :pick_d20
   defp shapes_to_chip(_multi), do: nil
@@ -282,8 +280,14 @@ defmodule RapierLab.Screens.ConvexDiceScreen do
     wall_h = 0.05
     wall_t = 0.02
 
-    for {x, z} <- [{half, 0.0}, {-half, 0.0}, {0.0, half}, {0.0, -half}] do
-      Physics.add_static_cuboid_in(@world_name, x, wall_h, z, wall_t, wall_h, half)
+    # See shells_screen.ex build_arena for the per-wall extent story.
+    for {x, z, hx, hz} <- [
+          {half, 0.0, wall_t, half},
+          {-half, 0.0, wall_t, half},
+          {0.0, half, half, wall_t},
+          {0.0, -half, half, wall_t}
+        ] do
+      Physics.add_static_cuboid_in(@world_name, x, wall_h, z, hx, wall_h, hz)
     end
 
     :ok
@@ -418,7 +422,7 @@ defmodule RapierLab.Screens.ConvexDiceScreen do
   # matches the physics collider scale exactly. Numeral positions match
   # MobRapier.Dice.face_up_dN so the readout label agrees with the top
   # face at rest.
-  @asset_by_label %{"d20" => "d20.glb", "d12" => "d12.glb", "d10" => "d10.glb"}
+  @asset_by_label %{"d20" => "d20.glb", "d12" => "d12.glb"}
 
   defp die_entity(entry, die_scale) do
     asset = Map.fetch!(@asset_by_label, entry.label)

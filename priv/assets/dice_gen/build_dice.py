@@ -445,13 +445,9 @@ def main():
 
     build_d6(geometry)
     # Numeral sizing tuned per shape so digits fill each face — d20 has
-    # 20 small triangles, d12 has 12 pentagons, d10 has 10 tall kites.
+    # 20 small triangles, d12 has 12 pentagons.
     build_hulled("d20", "d20.glb", geometry, numeral_scale=0.42)
     build_hulled("d12", "d12.glb", geometry, numeral_scale=0.55)
-    # d10 numeral scale 0.55 fits a two-digit number ("10") inside the
-    # kite bounds without clipping, and reads at the demo camera
-    # distance without needing a magnifier.
-    build_hulled("d10", "d10.glb", geometry, numeral_scale=0.55)
 
 
 if __name__ == "__main__":

@@ -8,10 +8,10 @@ defmodule RapierLab.Screens.PickerChipsTest do
   alias RapierLab.Screens.{ConvexDiceScreen, MultiDiceScreen, ShellsScreen}
 
   describe "entries/0" do
-    test "returns exactly the six demos the bead lists" do
+    test "returns the demo tags in order" do
       tags = PickerChips.entries() |> Enum.map(&elem(&1, 0))
 
-      assert tags == [:pick_shells, :pick_1d6, :pick_10d6, :pick_d10, :pick_d12, :pick_d20]
+      assert tags == [:pick_shells, :pick_1d6, :pick_10d6, :pick_d12, :pick_d20]
     end
 
     test "each entry maps to a real screen module and a params map" do
@@ -41,10 +41,6 @@ defmodule RapierLab.Screens.PickerChipsTest do
       assert PickerChips.resolve(:pick_10d6) == {:ok, MultiDiceScreen, %{count: 10}}
     end
 
-    test "D10 → ConvexDiceScreen with shapes: [:d10]" do
-      assert PickerChips.resolve(:pick_d10) == {:ok, ConvexDiceScreen, %{shapes: [:d10]}}
-    end
-
     test "D12 → ConvexDiceScreen with shapes: [:d12]" do
       assert PickerChips.resolve(:pick_d12) == {:ok, ConvexDiceScreen, %{shapes: [:d12]}}
     end
@@ -68,7 +64,7 @@ defmodule RapierLab.Screens.PickerChipsTest do
       row = PickerChips.chip_row(:pick_d20, sender)
 
       assert row.type == :row
-      assert length(row.children) == 6
+      assert length(row.children) == 5
 
       # Every chip has on_tap {sender, tag} matching one of the entries.
       tags = Enum.map(PickerChips.entries(), &elem(&1, 0))
