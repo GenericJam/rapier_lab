@@ -387,13 +387,17 @@ defmodule RapierLab.Screens.MultiDiceScreen do
     }
   end
 
+  # d6 mesh from priv/assets/dice_gen/build_dice.py: unit-half-extent cube
+  # with classical pip clusters on each face, arranged to match
+  # MobRapier.Dice.face_up_d6 (+Y=1, -Y=6, +X=2, -X=5, +Z=3, -Z=4). Scale by
+  # @die_half to match the physics cuboid extents.
   defp die_entity(die_id, entry) do
-    s = @die_half / 0.05
+    s = @die_half
 
     %Entity{
       id: "die_#{die_id}",
       transform: %Transform{position: entry.pos, rotation: entry.rot, scale: {s, s, s}},
-      data: %Model{asset: "probe.glb"}
+      data: %Model{asset: "d6.glb"}
     }
   end
 

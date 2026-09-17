@@ -32,9 +32,18 @@ defmodule RapierLab.Screens.ConvexDiceScreen do
 
   @default_shapes [:d20, :d12, :d10]
 
-  @die_scale 0.03
-  @drop_height 0.35
-  @arena_half 0.20
+  # Bigger die + wider arena for single-shape mounts (D10 / D12 / D20
+  # chips) — numerals need to be readable at demo distance and the die
+  # needs room to settle flat, not balanced on a wall. The three-in-one
+  # multi-shape mount stays smaller so the trio fits in a shared arena.
+  @die_scale_single 0.09
+  @die_scale_multi 0.03
+  @arena_half_single 0.60
+  @arena_half_multi 0.20
+  # Lower drop for single-mode (dies are ~15 cm across so they don't need
+  # a big drop, and a low drop keeps the settle in the camera frame).
+  @drop_height_single 0.20
+  @drop_height_multi 0.35
 
   @settle_frames 12
   @settle_lin_v 0.02
@@ -44,10 +53,12 @@ defmodule RapierLab.Screens.ConvexDiceScreen do
   def mount(params, _session, socket) do
     shapes = Map.get(params, :shapes, @default_shapes)
     active_chip = shapes_to_chip(shapes)
+    die_scale = die_scale_for(shapes)
+    arena_half = arena_half_for(shapes)
 
     :ok = Physics.new_world(@world_name)
-    _ = build_arena()
-    dice = spawn_dice(shapes)
+    if length(shapes) > 1, do: build_arena(arena_half)
+    dice = spawn_dice(shapes, die_scale)
 
     ref = make_ref()
     Process.send_after(self(), {:tick, ref}, @tick_ms)
@@ -56,6 +67,8 @@ defmodule RapierLab.Screens.ConvexDiceScreen do
      Mob.Socket.assign(socket,
        shapes: shapes,
        active_chip: active_chip,
+       die_scale: die_scale,
+       arena_half: arena_half,
        dice: dice,
        tick_ref: ref,
        frame: 0,
@@ -64,6 +77,11 @@ defmodule RapierLab.Screens.ConvexDiceScreen do
      )
      |> rebuild_scene()}
   end
+
+  # Big scale for single-shape mounts (D10 / D12 / D20 chips); smaller
+  # for the multi-shape default so the trio fits in the shared arena.
+  defp die_scale_for([_only]), do: @die_scale_single
+  defp die_scale_for(_multi), do: @die_scale_multi
 
   # A single-shape mount lights up that shape's chip; a multi-shape mount
   # (the default, [:d20, :d12, :d10]) doesn't correspond to any single
@@ -115,8 +133,8 @@ defmodule RapierLab.Screens.ConvexDiceScreen do
   def handle_info({:tap, :reset}, socket) do
     :ok = Physics.destroy_world(@world_name)
     :ok = Physics.new_world(@world_name)
-    _ = build_arena()
-    dice = spawn_dice(socket.assigns.shapes)
+    if length(socket.assigns.shapes) > 1, do: build_arena(socket.assigns.arena_half)
+    dice = spawn_dice(socket.assigns.shapes, socket.assigns.die_scale)
 
     {:noreply,
      Mob.Socket.assign(socket,
@@ -260,10 +278,9 @@ defmodule RapierLab.Screens.ConvexDiceScreen do
 
   # ── world setup ─────────────────────────────────────────────────────────
 
-  defp build_arena do
+  defp build_arena(half) do
     wall_h = 0.05
     wall_t = 0.02
-    half = @arena_half
 
     for {x, z} <- [{half, 0.0}, {-half, 0.0}, {0.0, half}, {0.0, -half}] do
       Physics.add_static_cuboid_in(@world_name, x, wall_h, z, wall_t, wall_h, half)
@@ -272,22 +289,38 @@ defmodule RapierLab.Screens.ConvexDiceScreen do
     :ok
   end
 
-  defp spawn_dice(shapes) do
+  # Wide arena for single-die mounts so a 9cm die can settle flat instead
+  # of balancing on a wall.
+  defp arena_half_for([_only]), do: @arena_half_single
+  defp arena_half_for(_multi), do: @arena_half_multi
+
+  defp spawn_dice(shapes, die_scale) do
+    drop_height = drop_height_for(shapes)
+    solo? = length(shapes) == 1
+
     for shape <- shapes,
         {label, verts_fun, face_fun, {ox, oz}, face_count} = Map.fetch!(@dice_by_shape, shape) do
+      # In solo mode, ignore the shape's arena offset — a single die
+      # sits centred so the camera doesn't need to track it.
+      {ox, oz} = if solo?, do: {0.0, 0.0}, else: {ox, oz}
       verts = apply(Dice, verts_fun, [])
-      body = Physics.add_convex_hull_in(@world_name, ox, @drop_height, oz, verts, @die_scale)
+      body = Physics.add_convex_hull_in(@world_name, ox, drop_height, oz, verts, die_scale)
 
-      # Same shake profile as MultiDiceScreen — slightly stronger torque so
-      # the fatter d20 has time to tumble before it hits the ground.
-      lx = (:rand.uniform() - 0.5) * 3.0e-4
-      lz = (:rand.uniform() - 0.5) * 3.0e-4
-      ly = 2.0e-5 + :rand.uniform() * 5.0e-5
+      # Solo mode: no linear impulse (the die was rolling off screen),
+      # just enough torque to break rotational symmetry so it lands on a
+      # random face instead of the same one every roll. Trio mode keeps
+      # the original bigger shake because 3 dice sharing an arena need to
+      # tumble past each other.
+      {lin_scale, torque_scale} = if solo?, do: {0.0, 0.3}, else: {1.0, 1.0}
+
+      lx = (:rand.uniform() - 0.5) * 3.0e-4 * lin_scale
+      lz = (:rand.uniform() - 0.5) * 3.0e-4 * lin_scale
+      ly = (2.0e-5 + :rand.uniform() * 5.0e-5) * lin_scale
       :ok = Physics.apply_impulse_in(@world_name, body, lx, ly, lz)
 
-      tx = (:rand.uniform() - 0.5) * 5.0e-6
-      ty = (:rand.uniform() - 0.5) * 5.0e-6
-      tz = (:rand.uniform() - 0.5) * 5.0e-6
+      tx = (:rand.uniform() - 0.5) * 5.0e-6 * torque_scale
+      ty = (:rand.uniform() - 0.5) * 5.0e-6 * torque_scale
+      tz = (:rand.uniform() - 0.5) * 5.0e-6 * torque_scale
       :ok = Physics.apply_torque_impulse_in(@world_name, body, tx, ty, tz)
 
       %{
@@ -295,7 +328,7 @@ defmodule RapierLab.Screens.ConvexDiceScreen do
         body_id: body,
         face_fun: face_fun,
         face_count: face_count,
-        pos: {ox, @drop_height, oz},
+        pos: {ox, drop_height, oz},
         rot: {0.0, 0.0, 0.0, 1.0},
         settle_streak: 0,
         settled?: false,
@@ -303,6 +336,9 @@ defmodule RapierLab.Screens.ConvexDiceScreen do
       }
     end
   end
+
+  defp drop_height_for([_only]), do: @drop_height_single
+  defp drop_height_for(_multi), do: @drop_height_multi
 
   defp advance_die(entry, transforms, dt) do
     case Enum.find(transforms, fn {id, _, _} -> id == entry.body_id end) do
@@ -334,13 +370,26 @@ defmodule RapierLab.Screens.ConvexDiceScreen do
   # ── scene rebuild ──────────────────────────────────────────────────────
 
   defp rebuild_scene(socket) do
-    die_entities = Enum.map(socket.assigns.dice, &die_entity/1)
+    die_scale = socket.assigns.die_scale
+    die_entities = Enum.map(socket.assigns.dice, &die_entity(&1, die_scale))
 
-    ir = IR.new([camera(), sun(), ground() | die_entities])
+    ir = IR.new([camera_for(socket.assigns.shapes), sun(), ground() | die_entities])
     Mob.Socket.assign(socket, :scene, ir)
   end
 
-  defp camera do
+  # Single-die mounts (D10 / D12 / D20 chips) get a closer, higher-pitched
+  # camera so numerals are big + the top face is nearly plan-view (easier
+  # to read). Multi-shape default keeps the wider pulled-back angle so
+  # three dice fit in the frame.
+  defp camera_for([_only]) do
+    %Entity{
+      id: "camera",
+      transform: Transform.from_euler({-55.0, 0.0, 0.0}, position: {0.0, 0.5, 0.25}),
+      data: %Camera{fov_y: 55.0, near: 0.02, far: 20.0}
+    }
+  end
+
+  defp camera_for(_multi) do
     %Entity{
       id: "camera",
       transform: Transform.from_euler({-40.0, 0.0, 0.0}, position: {0.0, 0.9, 0.55}),
@@ -364,17 +413,24 @@ defmodule RapierLab.Screens.ConvexDiceScreen do
     }
   end
 
-  # No d10/d12/d20 meshes shipped yet — use the probe cube as a placeholder,
-  # scaled by die circumradius. Visual mismatch (cube spinning where the
-  # physics is icosahedral) is called out in the bead; a proper mesh set is
-  # a separate cleanup task.
-  defp die_entity(entry) do
-    s = @die_scale / 0.05
+  # Per-shape .glb assets built by priv/assets/dice_gen/build_dice.py — the
+  # mesh is unit-radius (Blender BODY_RADIUS = 1.0) so the visual scale
+  # matches the physics collider scale exactly. Numeral positions match
+  # MobRapier.Dice.face_up_dN so the readout label agrees with the top
+  # face at rest.
+  @asset_by_label %{"d20" => "d20.glb", "d12" => "d12.glb", "d10" => "d10.glb"}
+
+  defp die_entity(entry, die_scale) do
+    asset = Map.fetch!(@asset_by_label, entry.label)
 
     %Entity{
       id: "die_#{entry.label}",
-      transform: %Transform{position: entry.pos, rotation: entry.rot, scale: {s, s, s}},
-      data: %Model{asset: "probe.glb"}
+      transform: %Transform{
+        position: entry.pos,
+        rotation: entry.rot,
+        scale: {die_scale, die_scale, die_scale}
+      },
+      data: %Model{asset: asset}
     }
   end
 
