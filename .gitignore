@@ -33,3 +33,18 @@ native/*/target/
 android/app/src/main/jni/.zig-cache/
 android/app/src/main/jni/zig-out/
 
+
+# mob_scene3d vendored Filament artifacts (fetch with scripts/fetch_filament_ios.sh)
+ios/vendor/
+
+# iOS zig build cache + output.
+ios/.zig-cache/
+ios/zig-out/
+
+# Stray Rustler / Cargo build byproducts.
+erl_nif.o
+/priv/native/*.so
+/priv/native/*.dylib
+
+# Native build fingerprints (regenerated per build).
+/android/app/.cxx/

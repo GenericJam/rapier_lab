@@ -2,7 +2,7 @@ defmodule RapierLab.Screens.MainScreen do
   @moduledoc """
   rapier_lab-0hf: a `Mob.Scene3d` viewport showing a single ball
   dropping onto a plane, driven by Rapier through
-  `RapierLab.Physics`. Each screen tick steps the world 33 ms forward
+  `MobRapier.Physics`. Each screen tick steps the world 33 ms forward
   and rebuilds the scene from the physics transforms.
 
   Placeholder mesh: chopaat's probe.glb (a 10 cm beveled cube) stands
@@ -15,7 +15,7 @@ defmodule RapierLab.Screens.MainScreen do
 
   alias Mob.Scene3d.IR
   alias Mob.Scene3d.IR.{Camera, Entity, Light, Model, Transform}
-  alias RapierLab.Physics
+  alias MobRapier.Physics
 
   @tick_ms 33
 
@@ -119,7 +119,7 @@ defmodule RapierLab.Screens.MainScreen do
             id: :viewport_wrap,
             fill_width: true,
             weight: 1,
-            background: 0xFF6B4A2D,
+            background: 0xFF102030,
             align: :center
           },
           children: [
@@ -128,7 +128,7 @@ defmodule RapierLab.Screens.MainScreen do
               ir: assigns.scene,
               width: 372,
               height: 500,
-              background: 0xFF6B4A2D
+              background: 0xFF102030
             )
           ]
         },

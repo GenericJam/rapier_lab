@@ -17,7 +17,11 @@ defmodule RapierLab.MixProject do
 
   def application do
     [
-      extra_applications: [:logger]
+      # :mob_rapier hosts the physics NIF loaded via Rustler on_load, which
+      # calls Application.app_dir/1 — the app must be in the boot manifest
+      # or the load raises "unknown application: :mob_rapier" (bead
+      # rapier_lab-d00 first-boot failure).
+      extra_applications: [:logger, :mob_rapier]
     ]
   end
 
@@ -26,17 +30,21 @@ defmodule RapierLab.MixProject do
 
   defp deps do
     [
-      {:mob, "~> 0.7.37"},
+      # MOB-226: link mob's fix locally until published. The worktree path
+      # points at the MOB-226-android-libc-decl branch; when the fix ships
+      # in a mob release, revert this line back to the hex tilde-pin.
+      {:mob,
+       path: System.get_env("MOB_PATH", "/Users/kevin/code/mob/.claude/worktrees/mob-226-libc-android"),
+       override: true},
       {:mob_scene3d, path: System.get_env("MOB_SCENE3D_PATH", "/Users/kevin/code/mob_scene3d")},
-      {:mob_dev, "~> 0.6.30", only: :dev, runtime: false},
+      # rapier_lab-d00: physics primitives (Rapier NIF + registry + face-up
+      # rules) extracted into a reusable Hex-shaped plugin. rapier_lab now
+      # keeps only the demo screens; every other physics-facing app can
+      # consume mob_rapier the same way.
+      {:mob_rapier, path: System.get_env("MOB_RAPIER_PATH", "/Users/kevin/code/mob_rapier")},
+      {:mob_dev, "~> 0.7.1", only: :dev, runtime: false},
       {:exqlite, "~> 0.27"},
-      {:igniter, "~> 0.8", only: [:dev, :test]},
-      # Rustler drives the `lab_physics` NIF crate at native/lab_physics/.
-      # That crate wraps `rapier3d` — the physics engine this spike exists
-      # to evaluate (bead rapier_lab-pkb). 0.38+ carries the Bionic dlsym
-      # fix (RUSTLER_BEAM_LIBRARY_PATH), without which nif_init aborts on
-      # Android (memory: project_mob_rustler_android_dlsym).
-      {:rustler, "~> 0.38"}
+      {:igniter, "~> 0.8", only: [:dev, :test]}
     ]
   end
 end

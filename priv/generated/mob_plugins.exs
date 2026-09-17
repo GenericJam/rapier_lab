@@ -4,12 +4,12 @@
 # Regenerated whenever `config :mob, :plugins` changes (the deploy/regen hook).
 %{
   nifs: [:mob_scene3d_nif],
-  settings: [],
-  screens: [],
-  notification_handlers: [],
   lifecycle: [],
+  screens: [],
+  composites: [],
   default_font: nil,
-  styles: [],
   default_style: nil,
-  composites: []
+  notification_handlers: [],
+  settings: [],
+  styles: []
 }

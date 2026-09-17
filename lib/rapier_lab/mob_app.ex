@@ -10,17 +10,37 @@ defmodule RapierLab.MobApp do
 
   use Mob.App
 
+  # rapier_lab-rid: every demo screen embeds the picker chip row from
+  # RapierLab.Screens.PickerChips, so any of them makes a fine boot
+  # screen — chips take the user everywhere else. ShellsScreen is the
+  # default because the chopaat driver is the most compelling first
+  # impression.
+  @root_screen RapierLab.Screens.ShellsScreen
+
   @impl Mob.App
   def navigation(_platform) do
-    stack(:main, root: RapierLab.Screens.MainScreen)
+    stack(:main, root: @root_screen)
   end
 
   @impl Mob.App
   def on_start do
     Application.put_env(:mob_scene3d, :asset_root, {:rapier_lab, "priv/assets"})
 
+    # rapier_lab-d00: mob_rapier is a plain dep whose module is loaded
+    # lazily. Rustler's on_load calls Application.app_dir(:mob_rapier)
+    # to find priv/native/, which requires the app be *loaded* (not
+    # started). mob_dev's boot manifest doesn't auto-load hex apps that
+    # aren't in rapier_lab's own extra_applications OR its start chain,
+    # so force the load here before anything triggers MobRapier.Physics.
+    _ = Application.load(:mob_rapier)
+
+    # Bead rapier_lab-ou4: named-world registry that lets agents drive
+    # physics by string name over dist without dragging NIF resource
+    # handles across the wire.
+    _ = MobRapier.Physics.Registry.start_link()
+
     Mob.DNS.configure_pure_beam()
-    Mob.Screen.start_root(RapierLab.Screens.MainScreen)
+    Mob.Screen.start_root(@root_screen)
 
     Mob.Dist.ensure_started(
       node: :"rapier_lab@127.0.0.1",

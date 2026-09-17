@@ -10,7 +10,13 @@ start() ->
     step(2, fun() -> application:start(elixir) end),
     step(3, fun() -> application:start(logger) end),
     step(4, fun() -> mob_nif:platform() end),
-    step(5, fun() -> 'Elixir.RapierLab.MobApp':start() end),
+    %% rapier_lab-d00: MobRapier.Physics's Rustler on_load calls
+    %% Application:app_dir(mob_rapier), which requires the app's .app file
+    %% to be loaded (not started — just loaded). start_clean's -boot only
+    %% loads kernel + stdlib, so any hex/path dep whose module is called
+    %% via Rustler must be loaded explicitly before its beam gets touched.
+    step(5, fun() -> application:load(mob_rapier) end),
+    step(6, fun() -> 'Elixir.RapierLab.MobApp':start() end),
     timer:sleep(infinity).
 
 step(N, Fun) ->
